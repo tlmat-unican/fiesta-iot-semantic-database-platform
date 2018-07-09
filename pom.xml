@@ -1,0 +1,192 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+   	<groupId>es.tlmat.fiesta-iot</groupId>
+   	<artifactId>platform</artifactId>
+	<packaging>pom</packaging>
+	<version>1.0.0</version>
+	<name>FIESTA-IoT UNICAN master project</name>
+	<url>http://www.fiesta-iot.eu</url>
+
+	<modules>
+		<module>utils/semantics</module>
+		<module>utils/openam</module>
+		<module>utils/commons</module>
+ 		<module>iot-registry</module>
+		<module>annotator-service</module>
+	</modules>
+
+	<!-- To deploy on the server run the following command: -->
+	<!-- wildfly:deploy -P <server-id> -->
+	<profiles>
+		<profile>
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<build.profile.id>.</build.profile.id>
+			</properties>
+		</profile>
+	</profiles>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<junit.version>3.8.1</junit.version>
+		<slf4j.version>1.7.21</slf4j.version>
+		<!-- current log4j 2 release -->
+		<log4j.version>2.5</log4j.version>
+		
+		<!-- <jena.version>3.0.1</jena.version> -->
+		<jena.version>3.5.0</jena.version>
+		<!-- Cannot use higher version as jena-spatial is not prepare for it -->
+		<lucene.version>4.10.4</lucene.version>
+		<solr.version>4.10.4</solr.version>
+		<spatial.version>0.5</spatial.version>
+
+		<jboss.resteasy.version>3.1.1.Final</jboss.resteasy.version>
+		<javax.cdi-api.version>1.2</javax.cdi-api.version>
+		<javax.servlet.version>3.0-alpha-1</javax.servlet.version>
+
+		<mysql-connector.version>5.1.40</mysql-connector.version>
+
+		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
+		<maven-war-plugin.version>2.6</maven-war-plugin.version>
+		<maven-resources-plugin.version>3.0.2</maven-resources-plugin.version>
+		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
+		<wildfly-plugin.version>1.2.0.Beta1</wildfly-plugin.version>
+	</properties>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+					<configuration>
+						<source>1.8</source>
+						<target>1.8</target>
+						<showDeprecation>true</showDeprecation>
+						<encoding>UTF-8</encoding>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-war-plugin</artifactId>
+					<version>${maven-war-plugin.version}</version>
+					<configuration>
+						<failOnMissingWebXml>false</failOnMissingWebXml>
+						<filters>
+							<filter>conf/${build.profile.id}/${configuration_file.properties}</filter>
+						</filters>
+						<webResources>
+							<resource>
+								<directory>docs/lib</directory>
+								<targetPath>docs/lib</targetPath>
+								<filtering>false</filtering>
+							</resource>
+							<resource>
+								<directory>docs</directory>
+								<targetPath>docs</targetPath>
+								<filtering>true</filtering>
+								<excludes>
+									<exclude>docs/lib/**</exclude>
+								</excludes>
+							</resource>
+						</webResources>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>${maven-resources-plugin.version}</version>
+					<executions>
+						<execution>
+							<id>copy-resources</id>
+							<!-- here the phase you need -->
+							<phase>process-resources</phase>
+							<goals>
+								<goal>copy-resources</goal>
+							</goals>
+							<configuration>
+								<outputDirectory>${basedir}/target/classes</outputDirectory>
+								<resources>
+									<resource>
+										<directory>conf/${build.profile.id}/</directory>
+										<filtering>true</filtering>
+										<includes>
+											<include>log4j2.xml</include>
+											<!-- Don't do it like this as then we override default -->
+											<!-- <include>fiesta-iot.properties</include> -->
+										</includes>
+									</resource>
+								</resources>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>properties-maven-plugin</artifactId>
+					<version>${properties-maven-plugin.version}</version>
+					<executions>
+						<execution>
+							<phase>initialize</phase>
+							<goals>
+								<goal>read-project-properties</goal>
+							</goals>
+							<configuration>
+								<files>
+									<file>conf/${build.profile.id}/wildfly.properties</file>
+<!-- 									<file>conf/${build.profile.id}/persistence.properties</file> -->
+<!-- 									<file>conf/${build.profile.id}/${configuration_file.properties}</file> -->
+								</files>
+							</configuration>
+						</execution>
+						<execution>
+							<id>wildfly-deploy</id>
+							<phase>package</phase>
+							<goals>
+								<goal>set-system-properties</goal>
+							</goals>
+				            <configuration>
+				              <properties>
+				                <property>
+				                  <name>javax.net.ssl.trustStore</name>
+				                  <value>${wildfly.trust_store.file}</value>
+				                </property>
+				                <property>
+				                  <name>javax.net.ssl.trustStorePassword</name>
+				                  <value>${wildfly.trust_store.password}</value>
+				                </property>
+				              </properties>
+				            </configuration>
+			          	</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.wildfly.plugins</groupId>
+					<artifactId>wildfly-maven-plugin</artifactId>
+					<version>${wildfly-plugin.version}</version>
+					<configuration>
+						<hostname>${wildfly.hostname}</hostname>
+						<port>${wildfly.port}</port>
+						<protocol>${wildfly.protocol}</protocol>
+						<username>${wildfly.username}</username>
+						<password>${wildfly.password}</password>
+					</configuration>
+					<executions>
+						<execution>
+							<!-- <phase>package</phase> -->
+							<!-- <goals> -->
+							<!-- <goal>deploy</goal> -->
+							<!-- </goals> -->
+						</execution>
+					</executions>
+				</plugin>
+	 		</plugins>
+	 	</pluginManagement>
+	</build>
+</project>
